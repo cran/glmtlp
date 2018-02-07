@@ -1,0 +1,11 @@
+a0b2b1db0951671af6e43a6ab2aa5bb5 *DESCRIPTION
+17256f18a34626377f6e3784e5802d73 *NAMESPACE
+92170c5a578989fb1180d1c5a169cdee *R/cvglmTLP.R
+a662fc9ffb7b197b7f0d1437125483a4 *R/glmTLP.R
+c346248698eb96f7afcca492e7b32ebf *data/QuickStartExample.RData
+cd8c783beaaf8b9aee0e1a15ae3d54be *man/QuickStartExample.Rd
+3a04f863b9088b5da753d64e2f462d01 *man/cv.glmTLP.Rd
+c86085d8d7eddddcb38b86a111893bcc *man/glmTLP.Rd
+28e835ec6586b43d140993a0d28c098b *man/glmtlp-package.Rd
+2e0776de2ef5c4521c843339de32bb1a *man/x.Rd
+a550e6289cc442b631d8edb87038350d *man/y.Rd
