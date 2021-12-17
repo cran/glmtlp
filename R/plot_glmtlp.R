@@ -1,17 +1,23 @@
-#' plot solution path from a "glmtlp" object.
+#' Plot Method for a "glmtlp" Object
 #'
-#' this function generates a solution path plot from a fitted \code{"glmtlp"} object.
+#' @description  
+#' Generates a solution path plot for a fitted \code{"glmtlp"} object.
 #' 
-#' @param x Fitted \code{"glmtlp"} model object.
-#' @param xvar the x-axis variable to plot against, including \code{"lambda"}, 
+#' @details 
+#' The generated plot is a \code{ggplot} object, and therefore, the users are able 
+#'   to customize the plots following the \code{ggplot2} syntax.
+#' 
+#' @param x Fitted \code{glmtlp} object.
+#' @param xvar The x-axis variable to plot against, including \code{"lambda"}, 
 #'   \code{"kappa"}, \code{"deviance"}, \code{"l1_norm"}, and \code{"log_lambda"}.
-#' @param xlab the x-axis label of the plot, default is "Lambda", "Kappa", 
-#'   "Fraction of Explained Deviance", "L1 Norm",  and "Log Lambda". 
-#' @param ylab the y-axis label of the plot, default is "Coefficients".
-#' @param title the main title of the plot, default is "Solution Path".
-#' @param label logical, whether or not attach the labels for the non-zero 
-#'   coefficients, default is FALSE.
-#' @param label.size the text size of the labels, default is 3.
+#' @param xlab The x-axis label of the plot, default is \code{"Lambda"}, 
+#'   \code{"Kappa"}, \code{"Fraction of Explained Deviance"}, \code{"L1 Norm"}, 
+#'   and \code{"Log Lambda"}. 
+#' @param ylab The y-axis label of the plot, default is "Coefficients".
+#' @param title The main title of the plot, default is "Solution Path".
+#' @param label Logical, whether or not attach the labels for the non-zero 
+#'   coefficients, default is \code{FALSE}.
+#' @param label.size The text size of the labels, default is 3.
 #' @param \dots Additional arguments.
 #' 
 #' @return A \code{ggplot} object.
@@ -25,9 +31,15 @@
 #' @references Shen, X., Pan, W., & Zhu, Y. (2012). 
 #'   \emph{Likelihood-based selection and sharp parameter estimation. 
 #'   Journal of the American Statistical Association, 107(497), 223-232.}
-#'   \cr Yang, Y., & Zou, H. (2014). \emph{A coordinate majorization descent algorithm 
-#'   for l1 penalized learning. Journal of Statistical Computation and 
-#'   Simulation, 84(1), 84-95.}
+#'   \cr Shen, X., Pan, W., Zhu, Y., & Zhou, H. (2013). 
+#'   \emph{On constrained and regularized high-dimensional regression. 
+#'   Annals of the Institute of Statistical Mathematics, 65(5), 807-832.}
+#'   \cr Li, C., Shen, X., & Pan, W. (2021). 
+#'   \emph{Inference for a Large Directed Graphical Model with Interventions. 
+#'   arXiv preprint arXiv:2110.03805.}
+#'   \cr Yang, Y., & Zou, H. (2014). 
+#'   \emph{A coordinate majorization descent algorithm for l1 penalized learning. 
+#'   Journal of Statistical Computation and Simulation, 84(1), 84-95.}
 #'   \cr Two R package Github: \emph{ncvreg} and \emph{glmnet}.
 #'   
 #' @keywords models plot
@@ -48,12 +60,10 @@
 #' @export
 #' @export plot.glmtlp
 
-plot.glmtlp <- function(x,xvar=c("lambda", "kappa", "deviance", "l1_norm", "log_lambda", "log_kappa"), 
+plot.glmtlp <- function(x,xvar=c("lambda", "kappa", "deviance", "l1_norm", "log_lambda"), 
                         xlab=iname, ylab="Coefficients", title="Solution Path", 
                         label=FALSE, label.size=3, ...) {
-    which.nonzero <- which(apply(abs(x$beta), 1, sum) != 0)
-    which.penalized <- which(x$penalty.factor != 0)
-    which.plot <- intersect(which.nonzero, which.penalized)
+    which.plot <- which(apply(abs(x$beta), 1, sum) != 0)
     if (length(which.plot) == 0) {
         warning("No plot produced, since all coefficients are zero or non-penalized.")
         return ()
@@ -65,7 +75,7 @@ plot.glmtlp <- function(x,xvar=c("lambda", "kappa", "deviance", "l1_norm", "log_
         return ()
         }
     }
-    if (xvar == "kappa" | xvar == "log_kappa") {
+    if (xvar == "kappa") {
         if (x$penalty != "l0") stop("No plot generated, since the xvar='kappa' should be used together with non-l0 penalties.")
         if (length(x$kappa) == 1) {
         warning("No plot generated, since the x was fit only on one kappa.")
@@ -95,10 +105,6 @@ plot.glmtlp <- function(x,xvar=c("lambda", "kappa", "deviance", "l1_norm", "log_
         "log_lambda" = {
             index <- log(x$lambda)
             iname <- expression(Log(lambda))
-        },
-        "log_kappa" = {
-          index <- log(x$kappa)
-          iname <- expression(Log(kappa))
         }
     )
 
@@ -107,7 +113,7 @@ plot.glmtlp <- function(x,xvar=c("lambda", "kappa", "deviance", "l1_norm", "log_
                      value = c(beta))
     df.legend <- data.frame(matrix(nrow=nrow(beta), ncol=3))
     colnames(df.legend) <- c("x.pos", "y.pos", "label")
-    if (xvar == 'kappa' | xvar == 'log_kappa') {
+    if (xvar == 'kappa') {
       df.legend$x.pos <- max(index)
       hjust.val <- 0
     } else {
@@ -123,6 +129,9 @@ plot.glmtlp <- function(x,xvar=c("lambda", "kappa", "deviance", "l1_norm", "log_
     if (label) {
       g <- g + geom_text(data=df.legend, aes_string(x = "x.pos", y = "y.pos", label = "label", colour = "label", 
                                              hjust = hjust.val), size = label.size)
+    }
+    if (xvar == "kappa") {
+      g <- g + scale_x_discrete(limits = factor(x$kappa))
     }
       
     g                               

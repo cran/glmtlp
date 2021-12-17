@@ -1,7 +1,7 @@
 /**********
     C++ Routines for Generalized Linear Model Optimization.
 
-    Copyright (C) 2021  Chunlin Li
+    Copyright (C) 2020-2021  Chunlin Li, Yu Yang
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -35,102 +35,13 @@
     <https://doi.org/10.1214/07-AOAS131>
 **********/
 
-
 void coordinate_descent(double *__restrict b0,
                         double *__restrict b,
-                        double *__restrict r,
-                        const double *__restrict X,
-                        const double v0,
-                        const double *__restrict v,
-                        const double *__restrict w,
-                        const double *__restrict rho,
-                        const double lambda,
-                        const int n,
-                        const int p,
-                        const double delta,
-                        const double tol,
-                        const int cd_maxit,
-                        int *__restrict it,
-                        int *__restrict strong,
-                        const int strong_len)
-{
-    double b_j;
-    double b_j_working;
-    double b_change;
-
-    int iter = *it;
-    // coordinate descent iteration
-    for (; iter != cd_maxit; ++iter)
-    {
-        // absolute difference in solution b
-        double difference = 0.0;
-
-        // strong set iteration
-        // std::shuffle(strong, strong + strong_len,
-        //              std::default_random_engine(std::time(0)));
-        std::shuffle(strong, strong + strong_len,
-                 std::default_random_engine(
-                     std::chrono::system_clock::now().time_since_epoch().count()));
-        for (int idx = 0; idx != strong_len; ++idx)
-        {
-            int j = strong[idx];
-            b_j = b[j];
-
-            // update b_j
-            // NEEDS TO BE REFACTORED!!!
-            b_j_working = soft_thresh(
-                              inner_product_simd(r, X + j * n, n, b_j * v[j]),
-                              n * lambda * rho[j]) /
-                          v[j];
-            b_change = b_j_working - b_j;
-
-            if (b_change != 0.0)
-            {
-                difference = std::abs(b_change) > difference ? std::abs(b_change) : difference;
-
-
-                // update r
-                for (int i = 0; i < n; ++i)
-                {
-                    r[i] -= w[i] * X[j*n + i] * b_change;
-                }
-
-
-                // update r
-                //vec_add_simd(r, X + j * n, 1.0, -b_change, n, r);
-
-
-                b[j] = b_j_working;
-            }
-        }
-
-        // update intercept
-        b_change = accumulate(r, n, 0.0) / v0;
-        *b0 += b_change;
-
-        //vec_add_simd(r, 1.0, -b_change, n, r);  //----------------------------------------------
-        for (int i = 0; i < n; ++i)
-        {
-            r[i] -= w[i] * b_change;
-        }
-
-
-        //
-        if (difference <= tol)
-            break;
-    }
-
-    *it = iter;
-}
-
-
-void coordinate_descent(double *__restrict b0,
-                        double *__restrict b,
-                        double *__restrict r,
+                        double *__restrict rw,
                         double *__restrict eta,
                         const double *__restrict X,
-                        const double v0,
-                        const double *__restrict v,
+                        const double w_sum,
+                        const double *__restrict xwx,
                         const double *__restrict w,
                         const double *__restrict rho,
                         const double lambda,
@@ -140,8 +51,8 @@ void coordinate_descent(double *__restrict b0,
                         const double tol,
                         const int cd_maxit,
                         int *__restrict it,
-                        int *__restrict strong,
-                        const int strong_len)
+                        int *__restrict working_set,
+                        const int working_len)
 {
     double b_j;
     double b_j_working;
@@ -154,69 +65,59 @@ void coordinate_descent(double *__restrict b0,
         // absolute difference in solution b
         double difference = 0.0;
 
-        // strong set iteration
-        // std::shuffle(strong, strong + strong_len,
-        //              std::default_random_engine(std::time(0)));
-        std::shuffle(strong, strong + strong_len,
-                 std::default_random_engine(
-                     std::chrono::system_clock::now().time_since_epoch().count()));
-        for (int idx = 0; idx != strong_len; ++idx)
+        // shuffle?
+
+        for (int idx = 0; idx != working_len; ++idx)
         {
-            int j = strong[idx];
+            int j = working_set[idx];
             b_j = b[j];
 
             // update b_j
-            // NEEDS TO BE REFACTORED!!!
             b_j_working = soft_thresh(
-                              inner_product_simd(r, X + j * n, n, b_j * v[j]),
-                              n * lambda * rho[j]) /
-                          v[j];
+                inner_prod(rw, X + j * n, n, 0.0) / (n * xwx[j] * delta) + b_j,
+                lambda * rho[j] / (xwx[j] * delta));
             b_change = b_j_working - b_j;
 
             if (b_change != 0.0)
             {
-                difference = std::abs(b_change) > difference ? std::abs(b_change) : difference;
-
-
-
+                difference = std::abs(b_change) > difference
+                                 ? std::abs(b_change)
+                                 : difference;
 
                 // update r
-                for (int i = 0; i < n; ++i)
+                if (eta)
                 {
-                    r[i] -= w[i] * X[j*n + i] * b_change;
-                    eta[i] += X[j*n + i] * b_change;
+                    for (int i = 0; i < n; ++i)
+                    {
+                        rw[i] -= w[i] * X[j * n + i] * b_change;
+                        eta[i] += X[j * n + i] * b_change;
+                    }
                 }
-
-
-
-
-                //vec_add_simd(r, X + j * n, 1.0, -b_change, n, r);  // --------------------------
-                //vec_add_simd(eta, X + j * n, 1.0, b_change, n, eta); // ------------------------
-
-
+                else
+                {
+                    for (int i = 0; i < n; ++i)
+                    {
+                        rw[i] -= w[i] * X[j * n + i] * b_change;
+                    }
+                }
 
                 b[j] = b_j_working;
             }
         }
 
         // update intercept
-        b_change = accumulate(r, n, 0.0) / v0;
+        b_change = accumulate(rw, n, 0.0) / (w_sum * delta);
         *b0 += b_change;
 
-
-
-        //vec_add_simd(r, 1.0, -b_change, n, r);  //----------------------------------------------
         for (int i = 0; i < n; ++i)
         {
-            r[i] -= w[i] * b_change;
+            rw[i] -= w[i] * b_change;
         }
 
-
-
-
-        //
         if (difference <= tol)
+        {
             break;
+        }
     }
 
     *it = iter;
@@ -224,11 +125,13 @@ void coordinate_descent(double *__restrict b0,
 
 void newton_raphson(double *__restrict b0,
                     double *__restrict b,
-                    double *__restrict r,
+                    double *__restrict rw,
                     double *__restrict eta,
+                    double w_sum,
+                    double *__restrict xwx,
                     const double *__restrict y,
                     const double *__restrict X,
-                    double *__restrict w,
+                    const double *__restrict w,
                     const double *__restrict rho,
                     const double lambda,
                     const int n,
@@ -246,63 +149,51 @@ void newton_raphson(double *__restrict b0,
     int iter = *it;
     int cd_it = 0;
 
-    double v0;
-    double *v = new double[p];
+    double *w_working = new double[n]();
     double *b_working = new double[p];
     std::copy(b, b + p, b_working);
 
     for (; iter != nr_maxit; ++iter)
     {
-
-        // update w, r, ...
+        // update w, rw, ...
+        // this is only for logistic, replace
         for (int i = 0; i < n; ++i)
         {
-            r[i] = 1.0 / (1.0 + std::exp(-*b0 - eta[i]));
-            if (std::abs(r[i] - 1.0) < tol)
+            if (w[i] != 0.0)
             {
-                r[i] = 1.0;
-                w[i] = tol;
+                rw[i] = 1.0 / (1.0 + std::exp(-*b0 - eta[i]));
+                if (std::abs(rw[i] - 1.0) < tol)
+                {
+                    rw[i] = 1.0;
+                    w_working[i] = tol;
+                }
+                else if (std::abs(rw[i]) < tol)
+                {
+                    rw[i] = 0.0;
+                    w_working[i] = tol;
+                }
+                else
+                {
+                    w_working[i] = rw[i] * (1.0 - rw[i]);
+                }
+                rw[i] = (y[i] - rw[i]) * w[i];
             }
-            else if (std::abs(r[i]) < tol)
-            {
-                r[i] = 0.0;
-                w[i] = tol;
-            }
-            else
-            {
-                w[i] = r[i] * (1.0 - r[i]);
-            }
-            r[i] = y[i] - r[i];
         }
 
-
-
-
-        // update v0, v
-        v0 = delta * accumulate(w, n, 0.0);
+        // update w_sum, xwx
+        w_sum = accumulate(w_working, n, 0.0);
         for (int j = 0; j < p; ++j)
         {
             if (is_working[j])
             {
-                v[j] = delta * inner_product_simd(
-                               X + j * n, X + j * n, w, n, 0.0);
+                xwx[j] = inner_prod(X + j * n, X + j * n, w_working, n, 0.0)/n;
             }
         }
 
-
-
-
-
-
         // weighted lasso over a working set
-        coordinate_descent(b0, b_working, r, eta, X, v0, v, w, rho,
+        coordinate_descent(b0, b_working, rw, eta, X, w_sum, xwx, w_working, rho,
                            lambda, n, p, delta, tol, cd_maxit,
                            &cd_it, working_set, working_len);
-
-        
-
-
-
 
         // check convergence
         double difference = 0.0;
@@ -318,10 +209,8 @@ void newton_raphson(double *__restrict b0,
         std::copy(b_working, b_working + p, b);
         if (difference <= tol)
             break;
-
-        
     }
 
-    delete[] v;
+    delete[] w_working;
     delete[] b_working;
 }

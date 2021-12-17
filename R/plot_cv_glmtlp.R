@@ -1,15 +1,18 @@
-#' plot the cross-validation curve produced by cv.glmtlp
+#' Plot Method for a "cv.glmtlp" Object
 #'
-#' Plots the cross-validation curve, and upper and lower standard deviation
-#'   curves, as a function of the \code{lambda} or \code{kappa} values used. 
+#' @description 
+#' Plots the cross-validation curve, and the upper and lower standard deviation
+#'   curves, as a function of the \code{lambda} or \code{kappa} values. 
 #'
-#' A plot is produced, and a ggplot object is returned.
+#' @details 
+#' The generated plot is a \code{ggplot} object, and therefore, the users are able 
+#'   to customize the plots following the \code{ggplot2} syntax.
 #'
 #' @aliases plot.cv.glmtlp
-#' @param x Fitted \code{"cv.glmtlp"} object
-#' @param vertical.line Logical. Whether to include a vertical line indicating the 
-#'   position of the index which gives the smallest CV error.
-#' @param \dots Other graphical parameters to plot
+#' @param x Fitted \code{cv.glmtlp} object
+#' @param vertical.line Logical. Whether or not include a vertical line 
+#'   indicating the position of the index which gives the smallest CV error.
+#' @param \dots Additional arguments.
 #' 
 #' @author Chunlin Li, Yu Yang, Chong Wu 
 #'   \cr Maintainer: Yu Yang \email{yang6367@umn.edu}
@@ -17,9 +20,15 @@
 #' @references Shen, X., Pan, W., & Zhu, Y. (2012). 
 #'   \emph{Likelihood-based selection and sharp parameter estimation. 
 #'   Journal of the American Statistical Association, 107(497), 223-232.}
-#'   \cr Yang, Y., & Zou, H. (2014). \emph{A coordinate majorization descent algorithm 
-#'   for l1 penalized learning. Journal of Statistical Computation and 
-#'   Simulation, 84(1), 84-95.}
+#'   \cr Shen, X., Pan, W., Zhu, Y., & Zhou, H. (2013). 
+#'   \emph{On constrained and regularized high-dimensional regression. 
+#'   Annals of the Institute of Statistical Mathematics, 65(5), 807-832.}
+#'   \cr Li, C., Shen, X., & Pan, W. (2021). 
+#'   \emph{Inference for a Large Directed Graphical Model with Interventions. 
+#'   arXiv preprint arXiv:2110.03805.}
+#'   \cr Yang, Y., & Zou, H. (2014). 
+#'   \emph{A coordinate majorization descent algorithm for l1 penalized learning. 
+#'   Journal of Statistical Computation and Simulation, 84(1), 84-95.}
 #'   \cr Two R package Github: \emph{ncvreg} and \emph{glmnet}.
 #'   
 #' @keywords models plot
@@ -46,7 +55,6 @@
 #' @method plot cv.glmtlp
 #' @export
 #' @export plot.cv.glmtlp
-#' 
 
 
 plot.cv.glmtlp <- function(x, vertical.line=TRUE, ...) {
@@ -79,7 +87,9 @@ plot.cv.glmtlp <- function(x, vertical.line=TRUE, ...) {
   if (vertical.line) {
     g <- g + geom_vline(xintercept = min.index, linetype = "dashed")
   }
-  
+  if (x$fit$penalty == "l0") {
+    g <- g + scale_x_discrete(limits = factor(x$kappa))
+  }
   g
 }
 

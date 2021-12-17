@@ -3,7 +3,7 @@
 \name{predict.cv.glmtlp}
 \alias{predict.cv.glmtlp}
 \alias{coef.cv.glmtlp}
-\title{make predictions from a "cv.glmtlp" object.}
+\title{Predict Method for a "cv.glmtlp" Object.}
 \usage{
 \method{predict}{cv.glmtlp}(
   object,
@@ -20,49 +20,42 @@
 \arguments{
 \item{object}{Fitted \code{"cv.glmtlp"} object.}
 
-\item{X}{Matrix of new values for \code{x} at which predictions are to be
-made. Must be a matrix. See documentation for \code{predict.glmtlp}.}
+\item{X}{X Matrix of new values for \code{X} at which predictions are to be
+made. Must be a matrix.}
 
-\item{type}{Type of prediction required. Type \code{"link"} gives the linear
-predictors for \code{"binomial"}
-models; for \code{"gaussian"} models it gives the fitted
-values. Type \code{"response"} gives the fitted probabilities for
-\code{"binomial"}; for \code{"gaussian"} type \code{"response"} is equivalent 
-to type \code{"link"}. Type \code{"coefficients"} computes the coefficients 
-at the requested values for \code{lambda} or \code{kappa}.  Note that for \code{"binomial"} 
+\item{type}{Type of prediction to be made. For \code{"gaussian"} models, type 
+\code{"link"} and \code{"response"} are equivalent and both give the fitted 
+values. For \code{"binomial"} models, type \code{"link"} gives the linear 
+predictors and type \code{"response"} gives the fitted probabilities. 
+Type \code{"coefficients"} computes the coefficients at the provided values 
+of \code{lambda} or \code{kappa}. Note that for \code{"binomial"} 
 models, results are returned only for the class corresponding to the second 
 level of the factor response. Type \code{"class"} applies only to 
-\code{"binomial"} models, and produces the class 
-label corresponding to the maximum probability. Type \code{"numnz"} returns the 
-total number of non-zeros coefficients for each value of \code{lambda} or 
-\code{kappa}. Type \code{"varnz"} returns 
-a list of the indices of the nonzero coefficients for each value of 
-\code{lambda} or \code{kappa}.}
+\code{"binomial"} models, and gives the class label corresponding to the 
+maximum probability. Type \code{"numnz"} gives the total number of non-zero 
+coefficients for each value of \code{lambda} or \code{kappa}. Type 
+\code{"varnz"} gives a list of indices of the nonzero coefficients for 
+each value of \code{lambda} or \code{kappa}.}
 
 \item{lambda}{Value of the penalty parameter \code{lambda} at which predictions
-are required. Default is NULL.}
+are to be made Default is NULL.}
 
 \item{kappa}{Value of the penalty parameter \code{kappa} at which predictions 
-are required. Default is NULL.}
+are to be made. Default is NULL.}
 
 \item{which}{Index of the penalty parameter \code{lambda} or \code{kappa} 
-sequence at which predictions are required. Default is the \code{idx.min} stored
-on the CV \code{object}.}
+sequence at which predictions are to be made. Default is the \code{idx.min} 
+stored in the \code{cv.glmtp} object.}
 
 \item{\dots}{Additional arguments.}
 }
 \value{
-The object returned depends on the \dots{} argument which is passed
-on to the \code{predict} method for \code{glmtlp} objects.
+The object returned depends on \code{type}.
 }
 \description{
-This function makes predictions from a cross-validated glmtlp model, using
-the stored \code{"glmtlp"} object, and the optimal value chosen for
-\code{lambda}.
-}
-\details{
-This function makes it easier to use the results of cross-validation to make
-a prediction.
+Makes predictions for a cross-validated glmtlp model, using
+  the stored \code{"glmtlp"} object, and the optimal value chosen for
+  \code{lambda}.
 }
 \examples{
 X <- matrix(rnorm(100 * 20), 100, 20)
@@ -77,9 +70,15 @@ predict(cv.fit, X = X[1:5, ], lambda = 0.1)
 Shen, X., Pan, W., & Zhu, Y. (2012). 
   \emph{Likelihood-based selection and sharp parameter estimation. 
   Journal of the American Statistical Association, 107(497), 223-232.}
-  \cr Yang, Y., & Zou, H. (2014). \emph{A coordinate majorization descent algorithm 
-  for l1 penalized learning. Journal of Statistical Computation and 
-  Simulation, 84(1), 84-95.}
+  \cr Shen, X., Pan, W., Zhu, Y., & Zhou, H. (2013). 
+  \emph{On constrained and regularized high-dimensional regression. 
+  Annals of the Institute of Statistical Mathematics, 65(5), 807-832.}
+  \cr Li, C., Shen, X., & Pan, W. (2021). 
+  \emph{Inference for a Large Directed Graphical Model with Interventions. 
+  arXiv preprint arXiv:2110.03805.}
+  \cr Yang, Y., & Zou, H. (2014). 
+  \emph{A coordinate majorization descent algorithm for l1 penalized learning. 
+  Journal of Statistical Computation and Simulation, 84(1), 84-95.}
   \cr Two R package Github: \emph{ncvreg} and \emph{glmnet}.
 }
 \seealso{

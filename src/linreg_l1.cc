@@ -1,7 +1,7 @@
 /**********
     C++ Routine for Computing Penalized Regression (dense design version).
 
-    Copyright (C) 2020-2021  Chunlin Li
+    Copyright (C) 2020-2021  Chunlin Li, Yu Yang
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -43,24 +43,30 @@
 **********/
 
 void linreg_l1_ssr(double *__restrict b0,
-                       double *__restrict b,
-                       double *__restrict r,
-                       const double *__restrict X,
-                       const double *__restrict w,
-                       const double *__restrict rho,
-                       const double *__restrict lambda,
-                       const int nlambda,
-                       const int n,
-                       const int p,
-                       const double delta,
-                       const double tol,
-                       const int cd_maxit)
+                   double *__restrict b,
+                   double *__restrict rw,
+                   double *__restrict eta,
+                   const double *__restrict X,
+                   const double w_sum,
+                   const double *__restrict xwx,
+                   const double *__restrict w,
+                   const double *__restrict rho,
+                   const double *__restrict lambda,
+                   const int nlambda,
+                   const int n,
+                   const int p,
+                   const double delta,
+                   const double tol,
+                   const int cd_maxit,
+                   double *__restrict dev)
 {
     /*
         b0:         nlambda-dim intercept array;
         b:          (p * nlambda)-dim coefficient array;
-        r:          n-dim working residual array;
+        rw:          n-dim working residual array;
         X:          (n * p)-dim design matrix array;
+        w_sum:
+        xwx: 
         w:          n-dim observation weight array;
         rho:        p-dim penalty factor array;
         lambda:     penalization parameter array;
@@ -70,88 +76,32 @@ void linreg_l1_ssr(double *__restrict b0,
         delta:      factor for majorized coordinate descent;
         tol:        tolerance error;
         cd_maxit:   maximum iteration of coordinate descent; 
-    */
-    
-    for(int i = 0; i < n; ++i)
-    {
-        r[i] *= w[i];
-    }
-
-    // store v
-    // MAY NEED OPTIMIZATION: ONLY VARIABLE IN ACT_SET ARE NEEDED
-    double v0 = delta * accumulate(w, n, 0.0);
-    double *v = new double[p];
-    for (int j = 0; j != p; ++j)
-    {
-        v[j] = delta * inner_product_simd(
-                           X + j * n, X + j * n, w, n, 0.0);
-    }
-
-    linreg_l1_ssr(b0, b, r, X, v0, v, w, rho, lambda, nlambda, n, p, delta, tol, cd_maxit);
-
-    delete[] v;
-}
-
-void linreg_l1_ssr(double *__restrict b0,
-                       double *__restrict b,
-                       double *__restrict r,
-                       const double *__restrict X,
-                       const double v0,
-                       const double *__restrict v,
-                       const double *__restrict w,
-                       const double *__restrict rho,
-                       const double *__restrict lambda,
-                       const int nlambda,
-                       const int n,
-                       const int p,
-                       const double delta,
-                       const double tol,
-                       const int cd_maxit)
-{
-    /*
-        b0:         nlambda-dim intercept array;
-        b:          (p * nlambda)-dim coefficient array;
-        r:          n-dim working residual array;
-        X:          (n * p)-dim design matrix array;
-        w:          n-dim observation weight array;
-        rho:        p-dim penalty factor array;
-        lambda:     penalization parameter array;
-        nlambda:    number of candidate lambda;
-        n:          number of observations;
-        p:          number of features;
-        delta:      factor for majorized coordinate descent;
-        tol:        tolerance error;
-        cd_maxit:   maximum iteration of coordinate descent; 
+        dev:        nlambda-dim deviance array;
     */
 
     // active set, strong set, and working set
-    int *ever_active = new int[p];
-    std::fill(ever_active, ever_active + p, 0);
-    int *is_strong = new int[p];
-    std::fill(is_strong, is_strong + p, 0);
-    int *is_working = new int[p];
-    std::fill(is_working, is_working + p, 0);
+    int *ever_active = new int[p]();
+    int *is_strong = new int[p]();
+    int *is_working = new int[p]();
 
     // working coordinates
     int *working_set = new int[p];
     int working_len = 0;
 
-    // TODO: NEED TO HANDLE EXCEPTIONS
     // start from k = 1, no need to compute null model (lambda[0])
     for (int k = 1; k < nlambda; ++k)
     {
-        
         /* 
             strong rule: 
             |sum_i [x_{ij} r_i(lambda_k)]| < 2lambda_{k+1} - lambda_k
             where r(lambda_k) satisfies optimality condition 
         */
-        
+
         // NEED TO HANDLE EXCEPTIONS (DIVERGENCE CASE)
         for (int j = 0; j < p; ++j)
         {
             // IF RHO > 0.
-            if (std::abs(inner_product_simd(r, X + j * n, n, 0.0)) / n >=
+            if (std::abs(inner_prod(rw, X + j * n, n, 0.0)) / n >=
                 (2.0 * lambda[k] - lambda[k - 1]) * rho[j])
             {
                 is_strong[j] = 1;
@@ -168,7 +118,7 @@ void linreg_l1_ssr(double *__restrict b0,
         {
             for (int j = 0; j < p; ++j)
             {
-                if (ever_active[j] || b[k*p + j] != 0.0)
+                if (ever_active[j] || b[k * p + j] != 0.0)
                 {
                     ever_active[j] = 1;
                     is_working[j] = 1;
@@ -200,7 +150,7 @@ void linreg_l1_ssr(double *__restrict b0,
             {
 
                 // lasso solution constrained on strong set
-                coordinate_descent(b0 + k, b + k * p, r, X, v0, v, w, rho,
+                coordinate_descent(b0 + k, b + k * p, rw, eta, X, w_sum, xwx, w, rho,
                                    lambda[k], n, p, delta, tol, cd_maxit,
                                    &it, working_set, working_len);
 
@@ -209,7 +159,7 @@ void linreg_l1_ssr(double *__restrict b0,
                 for (int j = 0; j < p; ++j)
                 {
                     if (is_strong[j] && !is_working[j] &&
-                        std::abs(inner_product_simd(r, X + j * n, n, 0.0)) / n >
+                        std::abs(inner_prod(rw, X + j * n, n, 0.0)) / n >
                             lambda[k] * rho[j])
                     {
                         // KKT condition is violated
@@ -231,7 +181,7 @@ void linreg_l1_ssr(double *__restrict b0,
                 for (int j = 0; j < p; ++j)
                 {
                     if (!is_working[j] && !is_strong[j] &&
-                        std::abs(inner_product_simd(r, X + j * n, n, 0.0)) / n >
+                        std::abs(inner_prod(rw, X + j * n, n, 0.0)) / n >
                             lambda[k] * rho[j])
                     {
                         // KKT condition is violated
@@ -250,6 +200,16 @@ void linreg_l1_ssr(double *__restrict b0,
 
         if (kkt)
         {
+            double deviance = 0.0;
+            for (int i = 0; i < n; ++i)
+            {
+                if (w[i] != 0.0)
+                {
+                    deviance += rw[i] * rw[i] / w[i];
+                }
+            }
+            dev[k] = deviance;
+
             if (k != nlambda - 1)
             {
                 // estimate converges at lambda[k]

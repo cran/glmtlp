@@ -12,21 +12,21 @@ cv.glmtlp(X, y, ..., seed = NULL, nfolds = 10, obs.fold = NULL, ncores = 1)
 
 \item{y}{response, of length nobs, as in \code{glmtlp}.}
 
-\item{\dots}{Other arguments that can be passed to \code{glmtlp}}
+\item{\dots}{Other arguments that can be passed to \code{glmtlp}.}
 
 \item{seed}{the seed for reproduction purposes}
 
-\item{nfolds}{number of folds; default is 10. Although \code{nfolds} can be
-as large as the sample size (leave-one-out CV), it is not recommended for
-large datasets. The smallest value allowable is \code{nfolds=3}}
+\item{nfolds}{number of folds; default is 10. The smallest value allowable 
+is \code{nfolds=3}}
 
 \item{obs.fold}{an optional vector of values between 1 and \code{nfolds}
 identifying what fold each observation is in. If supplied, \code{nfolds} can
 be missing.}
 
 \item{ncores}{number of cores utilized; default is 1. If greater than 1, 
-then use \code{doParallel::foreach} to fit each fold; if equal to 1, then 
-use for loop to fit each fold. No need to register parallel outside.}
+then \code{doParallel::foreach} will be used to fit each fold; if equal to 
+1, then for loop will be used to fit each fold. Users don't have to register 
+parallel clusters outside.}
 }
 \value{
 an object of class \code{"cv.glmtlp"} is returned, which is a list
@@ -34,16 +34,16 @@ an object of class \code{"cv.glmtlp"} is returned, which is a list
 
 \item{call}{the function call}
 \item{cv.mean}{The mean cross-validated error - a vector of length
-  \code{length(kappa)} if \code{penalty = "l0"} and a vector of length 
-  \code{length{lambda}} otherwise.} 
+  \code{length(kappa)} if \code{penalty = "l0"} and \code{length{lambda}} 
+  otherwise.} 
 \item{cv.se}{estimate of standard error of \code{cv.mean}.} 
 \item{fit}{a fitted glmtlp object for the full data.} 
 \item{idx.min}{the index of the \code{lambda} or \code{kappa} sequence that 
   corresponding to the smallest cv mean error.}
 \item{kappa}{the values of \code{kappa} used in the fits, available when 
-  penalty = 'l0'.}
+  \code{penalty = 'l0'}.}
 \item{kappa.min}{the value of \code{kappa} that gives the minimum 
-  \code{cv.mean}, available when penalty is 'l0'. }
+  \code{cv.mean}, available when \code{penalty = 'l0'}. }
 \item{lambda}{the values of \code{lambda} used in the fits.} 
 \item{lambda.min}{value of \code{lambda} that gives minimum \code{cv.mean},  
   available when penalty is 'l1' or 'tlp'.} 
@@ -51,15 +51,20 @@ an object of class \code{"cv.glmtlp"} is returned, which is a list
 \item{obs.fold}{the fold id for each observation used in the CV.}
 }
 \description{
-Does k-fold cross-validation for glmtlp, produces a plot, and returns a
-value for \code{lambda} (or \code{kappa} if \code{penalty="l0"}).
+Performs k-fold cross-validation for l0, l1, or TLP-penalized regression models 
+over a grid of values for the regularization parameter \code{lambda} 
+(if \code{penalty="l0"}) or \code{kappa} (if \code{penalty="l0"}).
 }
 \details{
-The function runs \code{glmtlp} \code{nfolds}+1 times; the first to get the
-  \code{lambda} or \code{kappa} sequence, and then the remainder to compute 
-  the fit with each of the folds omitted. The error is accumulated, and the 
-  average (haven't finished yet) error and standard deviation over the folds 
-  is computed.
+The function calls \code{glmtlp} \code{nfolds}+1 times; the first call to get the
+  \code{lambda} or \code{kappa} sequence, and then the rest to compute 
+  the fit with each of the folds omitted. The cross-validation error is based 
+  on deviance (check here for more details). The error is accumulated over the 
+  folds, and the average error and standard deviation is computed. 
+  
+  When \code{family = "binomial"}, the fold assignment (if not provided by 
+  the user) is generated in a stratified manner, where the ratio of 0/1 outcomes 
+  are the same for each fold.
 }
 \examples{
 
@@ -78,9 +83,15 @@ cv.fit <- cv.glmtlp(X, y, family = "binomial", penalty = "l1", seed=2021)
 Shen, X., Pan, W., & Zhu, Y. (2012). 
   \emph{Likelihood-based selection and sharp parameter estimation. 
   Journal of the American Statistical Association, 107(497), 223-232.}
-  \cr Yang, Y., & Zou, H. (2014). \emph{A coordinate majorization descent algorithm 
-  for l1 penalized learning. Journal of Statistical Computation and 
-  Simulation, 84(1), 84-95.}
+  \cr Shen, X., Pan, W., Zhu, Y., & Zhou, H. (2013). 
+  \emph{On constrained and regularized high-dimensional regression. 
+  Annals of the Institute of Statistical Mathematics, 65(5), 807-832.}
+  \cr Li, C., Shen, X., & Pan, W. (2021). 
+  \emph{Inference for a Large Directed Graphical Model with Interventions. 
+  arXiv preprint arXiv:2110.03805.}
+  \cr Yang, Y., & Zou, H. (2014). 
+  \emph{A coordinate majorization descent algorithm for l1 penalized learning. 
+  Journal of Statistical Computation and Simulation, 84(1), 84-95.}
   \cr Two R package Github: \emph{ncvreg} and \emph{glmnet}.
 }
 \seealso{

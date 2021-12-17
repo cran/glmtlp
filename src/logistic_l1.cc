@@ -38,8 +38,13 @@
 
 void logistic_l1_ssr(double *__restrict b0,
                      double *__restrict b,
+                     double *__restrict rw,
+                     double *__restrict eta,
                      const double *__restrict y,
                      const double *__restrict X,
+                     double w_sum,
+                     double *__restrict xwx,
+                     double *__restrict w,
                      const double *__restrict rho,
                      const double *__restrict lambda,
                      const int nlambda,
@@ -48,33 +53,13 @@ void logistic_l1_ssr(double *__restrict b0,
                      const double delta,
                      const double tol,
                      const int nr_maxit,
-                     const int cd_maxit)
+                     const int cd_maxit,
+                     double *__restrict dev)
 {
-
-    // THIS PART MAY BE MOVED TO R FILE
-    double *eta = new double[n];
-    std::fill(eta, eta + n, 0.0);
-
-    // marginal prob of y
-    double y_mean = accumulate(y, n, 0.0) / n;
-    b0[0] = std::log(y_mean / (1.0 - y_mean));
-    b0[1] = b0[0];
-
-    // weight
-    double *w = new double[n];
-    std::fill(w, w + n, 0.0);
-
-    // working residual
-    double *r = new double[n];
-    std::fill(r, r + n, 0.0);
-    
     // active set, strong set, and working set
-    int *ever_active = new int[p];
-    std::fill(ever_active, ever_active + p, 0);
-    int *is_strong = new int[p];
-    std::fill(is_strong, is_strong + p, 0);
-    int *is_working = new int[p];
-    std::fill(is_working, is_working + p, 0);
+    int *ever_active = new int[p]();
+    int *is_strong = new int[p]();
+    int *is_working = new int[p]();
 
     // working coordinates
     int *working_set = new int[p];
@@ -91,7 +76,7 @@ void logistic_l1_ssr(double *__restrict b0,
         for (int j = 0; j < p; ++j)
         {
             // IF RHO > 0.
-            if (std::abs(inner_product_simd(r, X + j * n, n, 0.0)) / n >=
+            if (std::abs(inner_prod(rw, X + j * n, n, 0.0)) / n >=
                 (2.0 * lambda[k] - lambda[k - 1]) * rho[j])
             {
                 is_strong[j] = 1;
@@ -108,7 +93,7 @@ void logistic_l1_ssr(double *__restrict b0,
         {
             for (int j = 0; j < p; ++j)
             {
-                if (ever_active[j] || b[k*p + j] != 0.0)
+                if (ever_active[j] || b[k * p + j] != 0.0)
                 {
                     ever_active[j] = 1;
                     is_working[j] = 1;
@@ -141,8 +126,8 @@ void logistic_l1_ssr(double *__restrict b0,
             {
 
                 // newton-raphson over strong set
-                newton_raphson(b0 + k, b + k * p, r, eta, y, X, w, rho,
-                               lambda[k], n, p, delta, tol, &it, nr_maxit, 
+                newton_raphson(b0 + k, b + k * p, rw, eta, w_sum, xwx, y, X, w, rho,
+                               lambda[k], n, p, delta, tol, &it, nr_maxit,
                                cd_maxit, is_working, working_set, working_len);
 
                 // check KKT, update working set
@@ -150,7 +135,7 @@ void logistic_l1_ssr(double *__restrict b0,
                 for (int j = 0; j < p; ++j)
                 {
                     if (is_strong[j] && !is_working[j] &&
-                        std::abs(inner_product_simd(r, X + j * n, n, 0.0)) / n >
+                        std::abs(inner_prod(rw, X + j * n, n, 0.0)) / n >
                             lambda[k] * rho[j])
                     {
                         // KKT condition is violated
@@ -171,7 +156,7 @@ void logistic_l1_ssr(double *__restrict b0,
                 for (int j = 0; j < p; ++j)
                 {
                     if (!is_working[j] && !is_strong[j] &&
-                        std::abs(inner_product_simd(r, X + j * n, n, 0.0)) / n >
+                        std::abs(inner_prod(rw, X + j * n, n, 0.0)) / n >
                             lambda[k] * rho[j])
                     {
                         // KKT condition is violated
@@ -190,8 +175,30 @@ void logistic_l1_ssr(double *__restrict b0,
 
         if (kkt)
         {
+
+            // deviance
+            double deviance = 0.0;
+            for (int i = 0; i < n; ++i)
+            {
+                if (w[i] != 0.0)
+                {
+                    deviance -= y[i] == 1.0 ? w[i] * std::log(1.0 - rw[i])
+                                            : w[i] * std::log(1.0 + rw[i]);
+                }
+            }
+
+            dev[k] = deviance;
+
             if (k != nlambda - 1)
             {
+                if (deviance < 0.01 * dev[0])
+                {
+                    std::fill(dev + k + 1, dev + nlambda, NAN);
+                    std::fill(b0 + k + 1, b0 + nlambda, NAN);
+                    std::fill(b + k * p + p, b + nlambda * p, NAN);
+                    break;
+                }
+
                 // estimate converges at lambda[k]
                 // warm start
                 std::copy(b + k * p, b + k * p + p, b + k * p + p);
@@ -209,12 +216,8 @@ void logistic_l1_ssr(double *__restrict b0,
     }
 
     // free spaces
-    delete[] w;
-    delete[] r;
     delete[] ever_active;
     delete[] is_strong;
     delete[] is_working;
     delete[] working_set;
-
-    delete[] eta;
 }

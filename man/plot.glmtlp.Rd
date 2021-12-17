@@ -2,11 +2,11 @@
 % Please edit documentation in R/plot_glmtlp.R
 \name{plot.glmtlp}
 \alias{plot.glmtlp}
-\title{plot solution path from a "glmtlp" object.}
+\title{Plot Method for a "glmtlp" Object}
 \usage{
 \method{plot}{glmtlp}(
   x,
-  xvar = c("lambda", "kappa", "deviance", "l1_norm", "log_lambda", "log_kappa"),
+  xvar = c("lambda", "kappa", "deviance", "l1_norm", "log_lambda"),
   xlab = iname,
   ylab = "Coefficients",
   title = "Solution Path",
@@ -16,22 +16,23 @@
 )
 }
 \arguments{
-\item{x}{Fitted \code{"glmtlp"} model object.}
+\item{x}{Fitted \code{glmtlp} object.}
 
-\item{xvar}{the x-axis variable to plot against, including \code{"lambda"}, 
+\item{xvar}{The x-axis variable to plot against, including \code{"lambda"}, 
 \code{"kappa"}, \code{"deviance"}, \code{"l1_norm"}, and \code{"log_lambda"}.}
 
-\item{xlab}{the x-axis label of the plot, default is "Lambda", "Kappa", 
-"Fraction of Explained Deviance", "L1 Norm",  and "Log Lambda".}
+\item{xlab}{The x-axis label of the plot, default is \code{"Lambda"}, 
+\code{"Kappa"}, \code{"Fraction of Explained Deviance"}, \code{"L1 Norm"}, 
+and \code{"Log Lambda"}.}
 
-\item{ylab}{the y-axis label of the plot, default is "Coefficients".}
+\item{ylab}{The y-axis label of the plot, default is "Coefficients".}
 
-\item{title}{the main title of the plot, default is "Solution Path".}
+\item{title}{The main title of the plot, default is "Solution Path".}
 
-\item{label}{logical, whether or not attach the labels for the non-zero 
-coefficients, default is FALSE.}
+\item{label}{Logical, whether or not attach the labels for the non-zero 
+coefficients, default is \code{FALSE}.}
 
-\item{label.size}{the text size of the labels, default is 3.}
+\item{label.size}{The text size of the labels, default is 3.}
 
 \item{\dots}{Additional arguments.}
 }
@@ -39,7 +40,11 @@ coefficients, default is FALSE.}
 A \code{ggplot} object.
 }
 \description{
-this function generates a solution path plot from a fitted \code{"glmtlp"} object.
+Generates a solution path plot for a fitted \code{"glmtlp"} object.
+}
+\details{
+The generated plot is a \code{ggplot} object, and therefore, the users are able 
+  to customize the plots following the \code{ggplot2} syntax.
 }
 \examples{
 X <- matrix(rnorm(100 * 20), 100, 20)
@@ -57,9 +62,15 @@ plot(fit2, xvar = "kappa", label = TRUE)
 Shen, X., Pan, W., & Zhu, Y. (2012). 
   \emph{Likelihood-based selection and sharp parameter estimation. 
   Journal of the American Statistical Association, 107(497), 223-232.}
-  \cr Yang, Y., & Zou, H. (2014). \emph{A coordinate majorization descent algorithm 
-  for l1 penalized learning. Journal of Statistical Computation and 
-  Simulation, 84(1), 84-95.}
+  \cr Shen, X., Pan, W., Zhu, Y., & Zhou, H. (2013). 
+  \emph{On constrained and regularized high-dimensional regression. 
+  Annals of the Institute of Statistical Mathematics, 65(5), 807-832.}
+  \cr Li, C., Shen, X., & Pan, W. (2021). 
+  \emph{Inference for a Large Directed Graphical Model with Interventions. 
+  arXiv preprint arXiv:2110.03805.}
+  \cr Yang, Y., & Zou, H. (2014). 
+  \emph{A coordinate majorization descent algorithm for l1 penalized learning. 
+  Journal of Statistical Computation and Simulation, 84(1), 84-95.}
   \cr Two R package Github: \emph{ncvreg} and \emph{glmnet}.
 }
 \seealso{

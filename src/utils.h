@@ -24,7 +24,7 @@
 #include <R_ext/BLAS.h>
 
 
-inline double inner_product_simd(const double *array1,
+inline double inner_prod(const double *array1,
                                  const double *array2,
                                  const int length,
                                  double init)
@@ -33,7 +33,7 @@ inline double inner_product_simd(const double *array1,
     return init + F77_CALL(ddot)(&length, array1, &one, array2, &one);
 }
 
-inline double inner_product_simd(const double *array1,
+inline double inner_prod(const double *array1,
                                  const double *array2,
                                  const double *array3,
                                  const int length,
@@ -46,7 +46,7 @@ inline double inner_product_simd(const double *array1,
     return init;
 }
 
-inline void vec_add_simd(const double *array1,
+inline void vec_add(const double *array1,
                          const double scalar1,
                          const double scalar2,
                          const int length,
@@ -59,7 +59,7 @@ inline void vec_add_simd(const double *array1,
     }
 }
 
-inline void vec_add_simd(const double *array1,
+inline void vec_add(const double *array1,
                          const double *array2,
                          const double scalar1,
                          const double scalar2,

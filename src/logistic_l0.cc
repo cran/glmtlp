@@ -1,7 +1,7 @@
 /**********
-    C++ Routine for Computing L0 Regression (dense design version).
+    C++ Routine for Computing L0 Logistic Regression (dense design version).
 
-    Copyright (C) 2020-2021  Chunlin Li, Yu Yang
+    Copyright (C) 2021  Chunlin Li
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
     along with this program. If not, see <https://www.gnu.org/licenses/>.
 **********/
 
-#include <cmath>    
+#include <cmath>
 #include <queue>
 #include "algo.h"
 #include "glmtlp.h"
@@ -29,9 +29,10 @@ void l0_projection(double *__restrict b0,
                    double *__restrict rw_working,
                    double b0_init,
                    const double *__restrict rw_init,
+                   const double *__restrict y,
                    const double *__restrict X,
-                   const double w_sum,
-                   const double *__restrict xwx,
+                   double w_sum,
+                   double *__restrict xwx,
                    const double *__restrict w,
                    const double *__restrict rho,
                    const int *__restrict s,
@@ -40,10 +41,12 @@ void l0_projection(double *__restrict b0,
                    const int p,
                    const double delta,
                    const double tol,
+                   const int nr_maxit,
                    const int cd_maxit,
+                   const int *__restrict is_working,
                    double *__restrict dev)
 {
-    double *eta = NULL;
+    double *eta = new double[n](); // NEED MODIFIED
 
     int s_max = s[ns - 1]; // assume s is inceasing
     int *supp = new int[p];
@@ -51,13 +54,13 @@ void l0_projection(double *__restrict b0,
     int supp_len = 0;
     for (int j = 0; j < p; ++j)
     {
-        if (rho[j] == 0.0) 
+        if (rho[j] == 0.0)
         {
             supp[supp_len++] = j;
         }
     }
-    
-    std::priority_queue<std::pair<double, int>> queue;
+
+    std::priority_queue<std::pair<double, int> > queue;
     for (int j = 0; j < p; ++j)
     {
         if (std::abs(b_working[j]) > tol && rho[j] != 0.0)
@@ -67,7 +70,7 @@ void l0_projection(double *__restrict b0,
     }
 
     // upper bound of size of candidate model
-    int df_max = s_max < (int) queue.size() ? s_max : queue.size();
+    int df_max = s_max < (int)queue.size() ? s_max : queue.size();
 
     // sort the coefficients
     for (int df = 0; df < df_max; ++df)
@@ -83,83 +86,89 @@ void l0_projection(double *__restrict b0,
     for (int k = 0; k < ns; ++k)
     {
         int df = s[k];
-        if (df > df_max) 
+        if (df > df_max)
         {
             break;
         }
 
         int it = 0;
-        
-        coordinate_descent(&b0_working, b_working, rw_working, eta, X, w_sum, xwx, w, rho, 0.0,
-                           n, p, delta, tol, cd_maxit, &it, supp, df + supp_len);
+
+        newton_raphson(&b0_working, b_working, rw_working, eta, w_sum, xwx, y, X, w, rho, 0.0,
+                       n, p, delta, tol, &it, nr_maxit, cd_maxit, is_working,
+                       supp, df + supp_len);
+
+        // coordinate_descent(&b0_working, b_working, rw_working, eta, X, w_sum, xwx, w, rho, 0.0,
+        //                    n, p, delta, tol, cd_maxit, &it, supp, df + supp_len);
 
         double dev_working = 0.0;
         for (int i = 0; i < n; ++i)
         {
             if (w[i] != 0.0)
             {
-                dev_working += rw_working[i] * rw_working[i] / w[i];
+                dev_working -= w[i] * (y[i] == 1.0 ? std::log(1.0 - rw_working[i])
+                                                   : std::log(1.0 + rw_working[i]));
             }
         }
 
         if (dev_working < dev[k])
         {
-            // save the result 
+            // save the result
             b0[k] = b0_working;
             std::copy(b_working, b_working + p, b + k * p);
             dev[k] = dev_working;
         }
+
+        if (dev_working < 0.01 * dev[0])
+        {
+            if (k != ns - 1)
+            {
+                std::fill(dev + k + 1, dev + ns, NAN);
+                std::fill(b0 + k + 1, b0 + ns, NAN);
+                std::fill(b + k * p + p, b + ns * p, NAN);
+            }
+            // saturation 
+            break;
+        }
+
+        
     }
 
     delete[] supp;
+    delete[] eta;
 }
 
-
-void linreg_l0_ssr(double *__restrict b0,
-                   double *__restrict b,
-                   double *__restrict rw,
-                   double *__restrict eta,
-                   const double *__restrict X,
-                   const double *__restrict x_sd,
-                   const double w_sum,
-                   const double *__restrict xwx,
-                   const double *__restrict w,
-                   const double *__restrict rho,
-                   const int *__restrict s,
-                   const int ns,
-                   const double *__restrict lambda,
-                   const int nlambda,
-                   const double tau,
-                   const int n,
-                   const int p,
-                   const double delta,
-                   const double tol,
-                   const int cd_maxit,
-                   const int dc_maxit,
-                   double *__restrict dev)
+void logistic_l0_ssr(double *__restrict b0,
+                     double *__restrict b,
+                     double *__restrict rw,
+                     double *__restrict eta,
+                     const double *__restrict y,
+                     const double *__restrict X,
+                     const double *__restrict x_sd,
+                     double w_sum,
+                     double *__restrict xwx,
+                     double *__restrict w,
+                     const double *__restrict rho,
+                     const int *__restrict s,
+                     const int ns,
+                     const double *__restrict lambda,
+                     const int nlambda,
+                     const double tau,
+                     const int n,
+                     const int p,
+                     const double delta,
+                     const double tol,
+                     const int nr_maxit,
+                     const int cd_maxit,
+                     const int dc_maxit,
+                     double *__restrict dev)
 {
-    /*
-        b0:         nlambda-dim intercept array;
-        b:          (p * nlambda)-dim coefficient array;
-        r:          n-dim working residual array;
-        X:          (n * p)-dim design matrix array;
-        w:          n-dim observation weight array;
-        rho:        p-dim penalty factor array;
-        lambda:     penalization parameter array;
-        nlambda:    number of candidate lambda;
-        n:          number of observations;
-        p:          number of features;
-        delta:      factor for majorized coordinate descent;
-        tol:        tolerance error;
-        cd_maxit:   maximum iteration of coordinate descent; 
-    */
-   
     double *rw_working = new double[n]; // working residual of d.c.
+    double *eta_working = new double[n];
     double *rw_init = new double[n];
     std::copy(rw, rw + n, rw_init);
 
     // working coordinates
-    int *is_working = new int[p];
+    int *is_working = new int[p]();
     int *working_set = new int[p];
     int working_len = 0;
 
@@ -168,8 +177,8 @@ void linreg_l0_ssr(double *__restrict b0,
     // b_working[0:p-1] saved for warm start
     // b_working[p:2p-1] for working estimating coefficients
     double *b_working = new double[p * 2]();
-    double b0_working[2] {b0[0], b0[0]};
-    double dev_working[2] {dev[0], dev[0]};
+    double b0_working[2]{b0[0], b0[0]};
+    double dev_working[2]{dev[0], dev[0]};
 
     // save the initial guess of b0
     double b0_init = b0[0];
@@ -177,23 +186,24 @@ void linreg_l0_ssr(double *__restrict b0,
     for (int k = 1; k < nlambda; ++k)
     {
         // warm start
-        std::copy(b_working, b_working+p, b_working + p);
+        std::copy(b_working, b_working + p, b_working + p);
         b0_working[1] = b0_working[0];
 
-        // call lasso solver
-        linreg_l1_ssr(b0_working, b_working, rw, eta, X, w_sum, xwx, w, rho,
-                      &lambda[k - 1], 2, n, p, delta, tol, cd_maxit, dev_working);
+        // call l1 logistic solver
+        logistic_l1_ssr(b0_working, b_working, rw, eta, y, X, w_sum, xwx, w, rho,
+                        &lambda[k - 1], 2, n, p, delta, tol, nr_maxit, cd_maxit, dev_working);
 
         // save solutions for warm start
-        if (k < nlambda - 1)
+        if (k != nlambda - 1)
         {
             b0_working[0] = b0_working[1];
             std::copy(b_working + p, b_working + 2 * p, b_working);
-            dev_working[0]=dev_working[1];
+            dev_working[0] = dev_working[1];
         }
 
         // difference-of-convex program
         std::copy(rw, rw + n, rw_working);
+        std::copy(eta, eta + n, eta_working);
         std::copy(rho, rho + p, rho_working);
 
         int it = 0;
@@ -202,7 +212,7 @@ void linreg_l0_ssr(double *__restrict b0,
         {
             int converge = 1; // indicate whether rho changes
 
-            // update rho
+            // update rho, tlp module
             for (int j = 0; j < p; ++j)
             {
                 if (std::abs(b_working[p + j]) * x_sd[j] >= tau)
@@ -234,12 +244,14 @@ void linreg_l0_ssr(double *__restrict b0,
             }
 
             // iterate on working set
-            int it_cd = 0;
+            int it_nr = 0;
             for (;;)
             {
-                coordinate_descent(&b0_working[1], b_working + p, rw_working, eta, X, w_sum, xwx, w, rho_working,
-                                   lambda[k], n, p, delta, tol, cd_maxit,
-                                   &it_cd, working_set, working_len);
+                // newton
+                newton_raphson(&b0_working[1], b_working + p, rw_working, eta_working, w_sum, xwx, y, X, w, rho_working,
+                               lambda[k], n, p, delta, tol,
+                               &it_nr, nr_maxit, cd_maxit, is_working,
+                               working_set, working_len);
 
                 // check kkt for all
                 int kkt = 1;
@@ -257,7 +269,7 @@ void linreg_l0_ssr(double *__restrict b0,
                     }
                 }
 
-                if (kkt || it_cd >= cd_maxit)
+                if (kkt || it_nr >= nr_maxit)
                     break;
             }
         }
@@ -267,14 +279,16 @@ void linreg_l0_ssr(double *__restrict b0,
 
         // NEED TO OPTIMIZE THIS!
         l0_projection(b0, b, b_working + p, rw_working, b0_init, rw_init,
-                      X, w_sum, xwx, w, rho, s, ns, n, p, delta, tol, cd_maxit, dev);
+                      y, X, w_sum, xwx, w, rho, s, ns, n, p, delta, tol, nr_maxit, cd_maxit, 
+                      is_working, dev);
     }
 
+    // free spaces
     delete[] rw_working;
+    delete[] eta_working;
     delete[] rw_init;
     delete[] is_working;
     delete[] working_set;
     delete[] rho_working;
     delete[] b_working;
 }
-

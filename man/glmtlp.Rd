@@ -3,15 +3,15 @@
 \docType{package}
 \name{glmtlp}
 \alias{glmtlp}
-\title{fit a GLM with l0, l1, or tlp regularization}
+\title{Fit a GLM with L0, L1, or TLP Penalization}
 \usage{
 glmtlp(
   X,
   y,
   family = c("gaussian", "binomial"),
   penalty = c("l0", "l1", "tlp"),
-  nlambda = 100,
-  lambda.min.ratio = ifelse(nobs < nvars, 0.01, 1e-04),
+  nlambda = ifelse(penalty == "l0", 50, 100),
+  lambda.min.ratio = ifelse(nobs < nvars, 0.05, 0.001),
   lambda = NULL,
   kappa = NULL,
   tau = 0.3 * sqrt(log(nvars)/nobs),
@@ -19,153 +19,132 @@ glmtlp(
   tol = 1e-04,
   weights = NULL,
   penalty.factor = rep(1, nvars),
-  standardize = TRUE,
+  standardize = FALSE,
   dc.maxit = 20,
   cd.maxit = 10000,
-  nr.maxit = 500,
+  nr.maxit = 20,
   ...
 )
 }
 \arguments{
-\item{X}{input matrix, of dimension \code{nobs} x \code{nvars}; 
-each row is  an observation vector. Currently, doesn't support the sparse 
-matrix format (inherit from class \code{"sparseMatrix"} as in package 
-\code{Matrix}).}
+\item{X}{Input matrix, of dimension \code{nobs} x \code{nvars};
+each row is  an observation vector.}
 
-\item{y}{response variable, of length nobs. Quantitative for 
-\code{family="gaussian"}, or \code{family="poisson"} (non-negative counts). 
-For \code{family="binomial"}, should be either a factor with two levels. 
-For \code{family="multinomial"}, (to be added).}
+\item{y}{Response variable, of length \code{nobs}. For \code{family="gaussian"},
+it should be quantitative; for \code{family="binomial"}, it should be either
+a factor with two levels or a binary vector.}
 
-\item{family}{a character string representing one of the built-in families. 
+\item{family}{A character string representing one of the built-in families.
 See Details section below.}
 
-\item{penalty}{a character string representing one of the built-in penalties. 
-"l0" represents \code{L_0} penalty, "l1" represents lasso-type penalty, and 
-"tlp" represents truncated lasso penalty.}
+\item{penalty}{A character string representing one of the built-in penalties.
+\code{"l0"} represents the \eqn{L_0} penalty, \code{"l1"} represents the
+lasso-type penalty (\eqn{L_1} penalty), and \code{"tlp"} represents the
+truncated lasso penalty.}
 
 \item{nlambda}{The number of \code{lambda} values. Default is 100.}
 
-\item{lambda.min.ratio}{Smallest value for \code{lambda}, as a fraction of 
-\code{lambda.max}, the (data derived) entry value (i.e. the smallest value 
-for which all coefficients are zero). The default depends on the sample size 
-\code{nobs} relative to the number of variables \code{nvars}. If \code{nobs 
-> nvars}, the default is \code{0.0001}, close to zero.  If \code{nobs < 
-nvars}, the default is \code{0.01}.}
+\item{lambda.min.ratio}{The smallest value for \code{lambda}, as a fraction of
+\code{lambda.max}, the smallest value for which all coefficients are zero.
+The default depends on the sample size \code{nobs} relative to the number
+of variables \code{nvars}. If \code{nobs > nvars}, the default is
+\code{0.0001}, and if \code{nobs < nvars}, the default is \code{0.01}.}
 
-\item{lambda}{A user supplied \code{lambda} sequence. Typical usage is to
-have the program compute its own \code{lambda} sequence based on 
-\code{nlambda} and \code{lambda.min.ratio}. Supplying a value of 
-\code{lambda} overrides this. WARNING: use with care. Avoid supplying a 
-single value for \code{lambda} (for predictions after CV use 
-\code{predict()} instead).  Supply instead a decreasing sequence of 
-\code{lambda} values. \code{glmtlp} relies on its warms starts for speed, 
-and its often faster to fit a whole path than compute a single fit. When
-the \code{penalty} is 'l0', it is not recommended for the users to supply 
+\item{lambda}{A user-supplied \code{lambda} sequence. Typically, users should let
+the program compute its own \code{lambda} sequence based on
+\code{nlambda} and \code{lambda.min.ratio}. Supplying a value of
+\code{lambda} will override this. WARNING: please use this option with care.
+\code{glmtlp} relies on warms starts for speed, and it's often faster to
+fit a whole path than a single fit. Therefore, provide a decreasing sequence
+of \code{lambda} values if you want to use this option. Also, when
+\code{penalty = 'l0'}, it is not recommended for the users to supply
 this parameter.}
 
-\item{kappa}{A user supplied \code{kappa} sequence. Typical usage is to
-have the program compute its own \code{kappa} sequence based on \code{nvars} 
-and \code{nobs}. This sequence is used when penalty is 'l0'.}
+\item{kappa}{A user-supplied \code{kappa} sequence. Typically, users should
+let the program compute its own \code{kappa} sequence based on \code{nvars}
+and \code{nobs}. This sequence is used when \code{penalty = 'l0'}.}
 
-\item{tau}{A tuning parameter used in the TLP penalty. Default is 
-\code{0.3 * sqrt(log(nvars)/nobs)}.}
+\item{tau}{A tuning parameter used in the TLP-penalized regression models.
+Default is  \code{0.3 * sqrt(log(nvars)/nobs)}.}
 
-\item{delta}{A tuning parameter used in the coordinate majorization descent 
-algorithm. See Yang, Y., & Zou, H. (2014) in the reference for detail.}
+\item{delta}{A tuning parameter used in the coordinate majorization descent
+algorithm. See Yang, Y., & Zou, H. (2014) in the reference for more detail.}
 
-\item{tol}{Tolerance level for all the iterative optimization algorithms.}
+\item{tol}{Tolerance level for all iterative optimization algorithms.}
 
-\item{weights}{observation weights. Default is 1 for each observation}
+\item{weights}{Observation weights. Default is 1 for each observation.}
 
-\item{penalty.factor}{Separate penalty factors can be applied to each 
-coefficient. This is a number that multiplies \code{lambda} to allow 
-differential shrinkage. Can be 0 for some variables, which implies no 
-shrinkage, and that variable is always included in the model. Default is 1 
+\item{penalty.factor}{Separate penalty factors applied to each
+coefficient, which allows for differential shrinkage. Default is 1
 for all variables.}
 
-\item{standardize}{Logical. Whether or not standardize the input matrix 
+\item{standardize}{Logical. Whether or not standardize the input matrix
 \code{X}; default is \code{TRUE}.}
 
-\item{dc.maxit}{Maximum number of iterations for the DC (Difference of 
+\item{dc.maxit}{Maximum number of iterations for the DC (Difference of
 Convex Functions) programming; default is 20.}
 
-\item{cd.maxit}{Maximum number of iterations for the coordinate descent 
+\item{cd.maxit}{Maximum number of iterations for the coordinate descent
 algorithm; default is 10^4.}
 
-\item{nr.maxit}{Maximum number of iterations for the Newton-Raphson method; 
+\item{nr.maxit}{Maximum number of iterations for the Newton-Raphson method;
 default is 500.}
 
-\item{...}{Additional argument. These include some of the original arguments 
-to 'glmtlp', and each must be named if used.}
+\item{...}{Additional arguments.}
 }
 \value{
-An object with S3 class \code{"glmtlp"}. 
+An object with S3 class \code{"glmtlp"}.
 
 \item{beta}{a \code{nvars x length(kappa)} matrix of
-  coefficients when penalty is 'l0'; a \code{nvars x length(lambda)} matrix of
-  coefficients when penalty is 'l1' and 'tlp'.}
-\item{call}{the call that produced this object.} 
+  coefficients when \code{penalty = 'l0'}; or a \code{nvars x length(lambda)}
+  matrix of coefficients when \code{penalty = c('l1', 'tlp')}.}
+\item{call}{the call that produces this object.}
 \item{family}{the distribution family used in the model fitting.}
-\item{intercept}{the intercept vector, of length(kappa) or length(lambda).}
-\item{lambda}{The actual sequence of \code{lambda} values used. Note that 
-  the length may be smaller than the provided \code{nlambda} due to removal 
-  of saturated values.} 
+\item{intercept}{the intercept vector, of \code{length(kappa)} when
+  \code{penalty = 'l0'} or \code{length(lambda)} when
+  \code{penalty = c('l1', 'tlp')}.}
+\item{lambda}{the actual sequence of \code{lambda} values used. Note that
+  the length may be smaller than the provided \code{nlambda} due to removal
+  of saturated values.}
 \item{penalty}{the penalty type in the model fitting.}
 \item{penalty.factor}{the penalty factor for each coefficient used in the model fitting.}
-\item{tau}{the tuning parameter used in the model fitting, available when 
-  penalty = 'tlp'.}
-\item{user.lambda}{logical, whether or not the used \code{lambda} sequence is 
-  provided by the user.}
-\item{user.kappa}{logical, whether or not the used \code{kappa} sequence is 
-  provided by the user, available when penalty = 'l0'.}
+\item{tau}{the tuning parameter used in the model fitting, available when
+  \code{penalty = 'tlp'}.}
 }
 \description{
-Fit a generalize linear model via penalized maximum likelihood. The 
-  regularization path is computed for the l0, lasso, or truncated lasso 
-  penalty at a grid of values for the regularization parameter: number of 
-  non-zeros or lambda. Can deal with all shapes of data (not large sparse 
-  data matrices now). Fits linear, logistic, multinomial, and poisson models.
-  
-The sequence of models implied by \code{lambda} or \code{kappa} is fit by 
-  coordinate descent.
+Fit generalized linear models via penalized maximum likelihood. The
+  regularization path is computed for the l0, lasso, or truncated lasso
+  penalty at a grid of values for the regularization parameter \code{lambda}
+  or \code{kappa}. Fits linear and logistic regression models.
 
 The package provides 3 penalties: l0, l1, and tlp and 3 distribution families: 
   gaussian, binomial, and poisson.
 }
 \details{
-The objective function for \code{"gaussian"} is \deqn{1/2 RSS/nobs +
-  \lambda*penalty,} and for the other models it is \deqn{-loglik/nobs + 
-  \lambda*penalty.} 
-  Note also that for \code{"gaussian"}, \code{glmtlp} standardizes y to 
-  have unit variance (using 1/(n-1) formula). The coefficients for any 
-  predictor variables with zero variance are set to zero for all values of 
-  lambda.
+The sequence of models indexed by \code{lambda} (when \code{penalty = c('l1', 'tlp')})
+  or \code{kappa} (when \code{penalty = 'l0'}) is fit by the coordinate
+  descent algorithm.
 
-## Details on `family` option
+  The objective function for the \code{"gaussian"} family is:
+  \deqn{1/2 RSS/nobs + \lambda*penalty,} and for the other models it is:
+  \deqn{-loglik/nobs + \lambda*penalty.}
+  Also note that, for \code{"gaussian"}, \code{glmtlp} standardizes y to
+  have unit variance (using 1/(n-1) formula).
 
-glmtlp currently only supports built-in families.
+  ## Details on \code{family} option
 
-The built in families are specified via a character string. For all families,
-the object produced is a regularization path for fitting the generalized 
-linear regression paths, by maximizing the appropriate penalized
-log-likelihood. Sometimes the sequence is truncated before \code{nlambda} 
-values of \code{lambda} have been used, because of instabilities in the 
-inverse link functions near a saturated fit. \code{glmtlp(..., family="binomial")} 
-fits a traditional logistic regression model for the log-odds.
-\code{glmtlp(..., family="multinomial")} fits a symmetric multinomial model,
-where each class is represented by a linear model (on the log-scale). The
-penalties take care of redundancies. A two-class \code{"multinomial"} model
-will produce the same fit as the corresponding \code{"binomial"} model,
-except the pair of coefficient matrices will be equal in magnitude and
-opposite in sign, and half the \code{"binomial"} values.
+  \code{glmtlp} currently only supports built-in families, which are specified by a
+  character string. For all families, the returned object is a regularization
+  path for fitting the generalized linear regression models, by maximizing the
+  corresponding penalized log-likelihood. \code{glmtlp(..., family="binomial")}
+  fits a traditional logistic regression model for the log-odds.
 
-## Details on `penalty` option
+  ## Details on \code{penalty} option
 
-The built in penalties are specified by a character string. For \code{l0} 
-  penalty, \code{kappa} sequence is used for generating the regularization 
-  path, while for the other penalties, \code{lambda} sequence is used for 
-  generating the regularization path.
+  The built-in penalties are specified by a character string. For \code{l0}
+  penalty, \code{kappa} sequence is used for generating the regularization
+  path, while for \code{l1} and \code{tlp} penalty, \code{lambda} sequence
+  is used for generating the regularization path.
 }
 \section{glmtlp functions}{
 
@@ -184,17 +163,22 @@ fit3 <- glmtlp(X, y, family = "gaussian", penalty = "tlp")
 # Binomial
 
 X <- matrix(rnorm(100 * 20), 100, 20)
-y <- sample(c(0,1), 100, replace = TRUE)
+y <- sample(c(0, 1), 100, replace = TRUE)
 fit <- glmtlp(X, y, family = "binomial", penalty = "l1")
-
 }
 \references{
-Shen, X., Pan, W., & Zhu, Y. (2012). 
-  \emph{Likelihood-based selection and sharp parameter estimation. 
+Shen, X., Pan, W., & Zhu, Y. (2012).
+  \emph{Likelihood-based selection and sharp parameter estimation.
   Journal of the American Statistical Association, 107(497), 223-232.}
-  \cr Yang, Y., & Zou, H. (2014). \emph{A coordinate majorization descent algorithm 
-  for l1 penalized learning. Journal of Statistical Computation and 
-  Simulation, 84(1), 84-95.}
+  \cr Shen, X., Pan, W., Zhu, Y., & Zhou, H. (2013).
+  \emph{On constrained and regularized high-dimensional regression.
+  Annals of the Institute of Statistical Mathematics, 65(5), 807-832.}
+  \cr Li, C., Shen, X., & Pan, W. (2021).
+  \emph{Inference for a Large Directed Graphical Model with Interventions.
+  arXiv preprint arXiv:2110.03805.}
+  \cr Yang, Y., & Zou, H. (2014).
+  \emph{A coordinate majorization descent algorithm for l1 penalized learning.
+  Journal of Statistical Computation and Simulation, 84(1), 84-95.}
   \cr Two R package Github: \emph{ncvreg} and \emph{glmnet}.
 }
 \seealso{
