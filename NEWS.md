@@ -1,3 +1,10 @@
+# glmtlp 2.0.2
+
+- Fix the Remapping issue regarding C++.
+- Fix the _PACKAGE.
+- Update authors' information.
+- Fix a few typos.
+
 # glmtlp 2.0.1
 - fix bugs in the default `kappa` sequence setting
 - update the default hyper-parameter settings

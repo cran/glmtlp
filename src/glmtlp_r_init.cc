@@ -17,10 +17,20 @@
     along with this program. If not, see <https://www.gnu.org/licenses/>.
 **********/
 
+#define R_NO_REMAP
+
 #include "glmtlp.h"
 #include "R.h"
 #include "Rinternals.h"
 #include "R_ext/Rdynload.h"
+
+int Rf_nrows(SEXP s);
+int Rf_ncols(SEXP s);
+int LENGTH(SEXP x);
+#define nrows Rf_nrows
+#define ncols Rf_ncols
+R_len_t Rf_length(SEXP x);
+#define length Rf_length
 
 extern "C"
 {
@@ -48,9 +58,9 @@ extern "C"
         int nlambda = length(lambda_vec);
 
         // output
-        SEXP intercept = PROTECT(allocVector(REALSXP, nlambda));
-        SEXP beta = PROTECT(allocVector(REALSXP, p * nlambda));
-        SEXP deviance = PROTECT(allocVector(REALSXP, nlambda));
+        SEXP intercept = PROTECT(Rf_allocVector(REALSXP, nlambda));
+        SEXP beta = PROTECT(Rf_allocVector(REALSXP, p * nlambda));
+        SEXP deviance = PROTECT(Rf_allocVector(REALSXP, nlambda));
 
         double *b0 = REAL(intercept);
         double *b = REAL(beta);
@@ -90,7 +100,7 @@ extern "C"
         delete[] rho;
         delete[] rw;
 
-        SEXP result = PROTECT(allocVector(VECSXP, 3));
+        SEXP result = PROTECT(Rf_allocVector(VECSXP, 3));
 
         SET_VECTOR_ELT(result, 0, intercept);
         SET_VECTOR_ELT(result, 1, beta);
@@ -126,9 +136,9 @@ extern "C"
         int nlambda = length(lambda_vec);
 
         // output
-        SEXP intercept = PROTECT(allocVector(REALSXP, nlambda));
-        SEXP beta = PROTECT(allocVector(REALSXP, p * nlambda));
-        SEXP deviance = PROTECT(allocVector(REALSXP, nlambda));
+        SEXP intercept = PROTECT(Rf_allocVector(REALSXP, nlambda));
+        SEXP beta = PROTECT(Rf_allocVector(REALSXP, p * nlambda));
+        SEXP deviance = PROTECT(Rf_allocVector(REALSXP, nlambda));
 
         double *b0 = REAL(intercept);
         double *b = REAL(beta);
@@ -171,7 +181,7 @@ extern "C"
         delete[] rho;
         delete[] rw;
 
-        SEXP result = PROTECT(allocVector(VECSXP, 3));
+        SEXP result = PROTECT(Rf_allocVector(VECSXP, 3));
         SET_VECTOR_ELT(result, 0, intercept);
         SET_VECTOR_ELT(result, 1, beta);
         SET_VECTOR_ELT(result, 2, deviance);
@@ -209,9 +219,9 @@ extern "C"
         int nlambda = length(lambda_vec);
 
         // output
-        SEXP intercept = PROTECT(allocVector(REALSXP, nkappa));
-        SEXP beta = PROTECT(allocVector(REALSXP, p * nkappa));
-        SEXP deviance = PROTECT(allocVector(REALSXP, nkappa));
+        SEXP intercept = PROTECT(Rf_allocVector(REALSXP, nkappa));
+        SEXP beta = PROTECT(Rf_allocVector(REALSXP, p * nkappa));
+        SEXP deviance = PROTECT(Rf_allocVector(REALSXP, nkappa));
 
         double *b0 = REAL(intercept);
         double *b = REAL(beta);
@@ -255,7 +265,7 @@ extern "C"
         delete[] rho;
         delete[] rw;
 
-        SEXP result = PROTECT(allocVector(VECSXP, 3));
+        SEXP result = PROTECT(Rf_allocVector(VECSXP, 3));
 
         SET_VECTOR_ELT(result, 0, intercept);
         SET_VECTOR_ELT(result, 1, beta);
@@ -290,9 +300,9 @@ extern "C"
         int nlambda = length(lambda_vec);
 
         // output
-        SEXP intercept = PROTECT(allocVector(REALSXP, nlambda));
-        SEXP beta = PROTECT(allocVector(REALSXP, p * nlambda));
-        SEXP deviance = PROTECT(allocVector(REALSXP, nlambda));
+        SEXP intercept = PROTECT(Rf_allocVector(REALSXP, nlambda));
+        SEXP beta = PROTECT(Rf_allocVector(REALSXP, p * nlambda));
+        SEXP deviance = PROTECT(Rf_allocVector(REALSXP, nlambda));
 
         double *b0 = REAL(intercept);
         double *b = REAL(beta);
@@ -334,7 +344,7 @@ extern "C"
         delete[] rho;
         delete[] rw;
 
-        SEXP result = PROTECT(allocVector(VECSXP, 3));
+        SEXP result = PROTECT(Rf_allocVector(VECSXP, 3));
 
         SET_VECTOR_ELT(result, 0, intercept);
         SET_VECTOR_ELT(result, 1, beta);
@@ -371,9 +381,9 @@ extern "C"
         int nlambda = length(lambda_vec);
 
         // output
-        SEXP intercept = PROTECT(allocVector(REALSXP, nlambda));
-        SEXP beta = PROTECT(allocVector(REALSXP, p * nlambda));
-        SEXP deviance = PROTECT(allocVector(REALSXP, nlambda));
+        SEXP intercept = PROTECT(Rf_allocVector(REALSXP, nlambda));
+        SEXP beta = PROTECT(Rf_allocVector(REALSXP, p * nlambda));
+        SEXP deviance = PROTECT(Rf_allocVector(REALSXP, nlambda));
 
         double *b0 = REAL(intercept);
         double *b = REAL(beta);
@@ -418,7 +428,7 @@ extern "C"
         delete[] rho;
         delete[] rw;
 
-        SEXP result = PROTECT(allocVector(VECSXP, 3));
+        SEXP result = PROTECT(Rf_allocVector(VECSXP, 3));
 
         SET_VECTOR_ELT(result, 0, intercept);
         SET_VECTOR_ELT(result, 1, beta);
@@ -458,9 +468,9 @@ extern "C"
         int nlambda = length(lambda_vec);
 
         // output
-        SEXP intercept = PROTECT(allocVector(REALSXP, nkappa));
-        SEXP beta = PROTECT(allocVector(REALSXP, p * nkappa));
-        SEXP deviance = PROTECT(allocVector(REALSXP, nkappa));
+        SEXP intercept = PROTECT(Rf_allocVector(REALSXP, nkappa));
+        SEXP beta = PROTECT(Rf_allocVector(REALSXP, p * nkappa));
+        SEXP deviance = PROTECT(Rf_allocVector(REALSXP, nkappa));
 
         double *b0 = REAL(intercept);
         double *b = REAL(beta);
@@ -507,7 +517,7 @@ extern "C"
         delete[] rho;
         delete[] rw;
 
-        SEXP result = PROTECT(allocVector(VECSXP, 3));
+        SEXP result = PROTECT(Rf_allocVector(VECSXP, 3));
 
         SET_VECTOR_ELT(result, 0, intercept);
         SET_VECTOR_ELT(result, 1, beta);

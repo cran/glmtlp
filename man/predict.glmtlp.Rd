@@ -11,8 +11,7 @@
   type = c("link", "response", "class", "coefficients", "numnz", "varnz"),
   lambda = NULL,
   kappa = NULL,
-  which = 1:(ifelse(object$penalty == "l0", length(object$kappa),
-    length(object$lambda))),
+  which = 1:(ifelse(object$penalty == "l0", length(object$kappa), length(object$lambda))),
   ...
 )
 
@@ -20,8 +19,7 @@
   object,
   lambda = NULL,
   kappa = NULL,
-  which = 1:(ifelse(object$penalty == "l0", length(object$kappa),
-    length(object$lambda))),
+  which = 1:(ifelse(object$penalty == "l0", length(object$kappa), length(object$lambda))),
   drop = TRUE,
   ...
 )

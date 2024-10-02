@@ -6,8 +6,7 @@
 #' @section glmtlp functions:
 #' `glmtlp()`, `cv.glmtlp()`
 #'
-#' @docType package
 #' @name glmtlp
 #' @useDynLib glmtlp, .registration=TRUE
-NULL
-#> NULL
+#' @keywords internal
+"_PACKAGE"
