@@ -22,7 +22,7 @@ knitr::knit_hooks$set(output = function(x, options) {
 })
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  install.packages("glmtlp")
+# install.packages("glmtlp")
 
 ## -----------------------------------------------------------------------------
 library(glmtlp)
